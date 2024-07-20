@@ -169,6 +169,5 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="item already exists in shopping cart")
         shopping_cart: list = current_user["shopping_cart"]
         shopping_cart.append(item_name)
-        print(item_name, shopping_cart)
         user_model.update(current_user["_id"], {"shopping_cart": shopping_cart})
         return {"description":"item added successfully", "shopping_cart": shopping_cart}
