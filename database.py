@@ -80,5 +80,9 @@ class ItemModel(Model):
             print(f"Exception {e}")
 
 
+class ExamModel(Model):
+    ...
+
+
 user_model = UserModel(users)
 item_model = ItemModel(items)

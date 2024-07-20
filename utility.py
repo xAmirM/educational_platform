@@ -4,11 +4,25 @@ from passlib.context import CryptContext
 import jwt
 from typing import Optional
 import uuid
+from dotenv import load_dotenv
+from pydantic import BaseSettings
 
-SECRET_KEY = "fdbdfff4b56dc2a220916c73f439377c6f429c6dc3f9d89c25f48dde7221861a"
+load_dotenv()
 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

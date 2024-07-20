@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from inputs import User, UserInDB, TokenData, Token, ShownUser, Item
-from models import user_model, item_model
+from models import User, UserInDB, TokenData, Token, ShownUser, Item
+from database import user_model, item_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from utility import create_access_token, get_password_hash, verify_password, decode_access_token, generate_id, is_admin 
@@ -31,6 +31,10 @@ def register(user: User) -> ShownUser:
     user_data.update({"items_owned": []})
     user_data.update({"rank": "student"})
     user_data.update({"balance": 0})
+
+# THIS LINE IS TEMPORRARY AND WILL BE REMOVED
+    if user_data["username"] == "admin":
+        user_data.update({"rank": "admin"})
 
     password = user_data["password"]
     user_data.update({"hashed_password": get_password_hash(password)})
