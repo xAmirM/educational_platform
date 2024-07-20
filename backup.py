@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from inputs import User, UserInDB, TokenData, Token, ShownUser, Item
-from models import user_model, item_model
+from models import User, UserInDB, TokenData, Token, ShownUser, Item
+from database import user_model, item_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from utility import create_access_token, get_password_hash, verify_password, decode_access_token, generate_user_id 
@@ -83,8 +83,8 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     return Token(access_token= access_token, token_type="bearer")
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from inputs import User, UserInDB, TokenData, Token, ShownUser, Item
-from models import user_model, item_model
+from models import User, UserInDB, TokenData, Token, ShownUser, Item
+from database import user_model, item_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from utility import create_access_token, get_password_hash, verify_password, decode_access_token, generate_user_id 
