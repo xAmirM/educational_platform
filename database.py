@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+from pymongo.collection import Collection
 
 client = MongoClient()
 
@@ -10,7 +11,7 @@ items = db["items"]
 
 
 class Model:
-    def __init__(self, collection):
+    def __init__(self, collection: Collection):
         self.collection = collection
 
     
@@ -78,7 +79,15 @@ class ItemModel(Model):
             return False
         except Exception as e:
             print(f"Exception {e}")
+    
 
+    def get_item_list(self) -> list:
+        items = self.collection.find()
+        item_name_list = []
+        for item in items:
+            item_name_list.extend(item.values())
+        item_name_list = list(set(item_name_list))
+        return item_name_list
 
 class ExamModel(Model):
     ...
