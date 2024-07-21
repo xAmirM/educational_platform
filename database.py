@@ -88,6 +88,8 @@ class ItemModel(Model):
             item_name_list.extend(item.values())
         item_name_list = list(set(item_name_list))
         return item_name_list
+    
+    
 
 class ExamModel(Model):
     ...

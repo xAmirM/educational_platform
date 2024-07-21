@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Body
 from models import User, UserInDB, TokenData, Token, ShownUser, Item
 from database import user_model, item_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -146,13 +146,13 @@ def charge_balance(current_user: Annotated[str, Depends(get_current_user)], conf
 
     new_balance = current_balance + amount
     user_model.update(current_user["_id"], {"balance": new_balance})
-
-    
     return {"balance": new_balance}
 
 
 @app.post("/shopping_cart/{act}/{item_name}")
 def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], act: str, item_name:str, existing_items: Annotated[list, Depends(read_items)]):
+    if act not in ("add", "remove"):
+        raise HTTPException(status=status.HTTP_404_NOT_FOUND, detail="path act argument is not add or remove")
     if act == "remove":
         if item_name in current_user["shopping_cart"]:
             shopping_cart: list = current_user["shopping_cart"]
@@ -171,3 +171,24 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
         shopping_cart.append(item_name)
         user_model.update(current_user["_id"], {"shopping_cart": shopping_cart})
         return {"description":"item added successfully", "shopping_cart": shopping_cart}
+    
+#TODO add the discount feature
+@app.post("/payoff/")
+def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], discount_code: Annotated[dict, Body()]):
+    total_price = 0
+    if not current_user["shopping_cart"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="empty shopping cart")
+    for item in current_user["shopping_cart"]:
+        item_price = item_model.get_by_name(item)["price"]
+        total_price += item_price
+
+    if current_user["balance"] < total_price:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not enough balance")
+
+    new_balance = current_user["balance"] - total_price
+    for item in current_user["shopping_cart"]:
+        current_user["items_owned"].append(item)
+    current_user["shopping_cart"] = []
+
+    user_model.update(current_user["_id"], {"shopping_cart": current_user["shopping_cart"], "balance": new_balance, "items_owned":current_user["items_owned"]}, )
+    return {"items_owned":current_user["items_owned"], "balance":new_balance}
