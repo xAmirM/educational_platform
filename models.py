@@ -38,3 +38,9 @@ class Item(BaseModel):
     name: str
     tag: str
     price: int
+
+
+class DiscountCode(BaseModel):
+    name: str
+    expiery_seconds: int
+    percentage: int = Field(le=100)

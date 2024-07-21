@@ -6,6 +6,7 @@ from typing import Optional
 import uuid
 from dotenv import load_dotenv
 from pydantic import BaseSettings
+import time
 
 load_dotenv()
 
@@ -60,3 +61,11 @@ def is_admin(user):
     if user["rank"] == "admin":
         return True
     return False
+
+#all times must be in seconds
+#this function is used for all timers like discount codes and probably exam timers.. might develop another system for that
+def time_expierd(starting_time, expiery_time):
+    now = time.time()
+    passed_time = now - starting_time
+    if passed_time >= expiery_time:
+        return True

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Body
-from models import User, UserInDB, TokenData, Token, ShownUser, Item
-from database import user_model, item_model
+from models import User, UserInDB, TokenData, Token, ShownUser, Item, DiscountCode
+from database import user_model, item_model, discount_code_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from utility import create_access_token, get_password_hash, verify_password, decode_access_token, generate_id, is_admin 
@@ -163,10 +163,12 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user does not have this item")
             
     if act == "add":
-        if not item_name in existing_items:
+        if not item_name in existing_items or item_name in current_user["items_owned"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="item does not exist")
         if item_name in current_user["shopping_cart"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="item already exists in shopping cart")
+        if item_name in current_user["items_owned"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="already owns this item")
         shopping_cart: list = current_user["shopping_cart"]
         shopping_cart.append(item_name)
         user_model.update(current_user["_id"], {"shopping_cart": shopping_cart})
@@ -174,12 +176,20 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
     
 #TODO add the discount feature
 @app.post("/payoff/")
-def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], discount_code: Annotated[dict, Body()]):
+def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], discount_code: str = Body(default=None)):
     total_price = 0
+    discount_multiplier = 1
     if not current_user["shopping_cart"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="empty shopping cart")
+    
+    if discount_code and discount_code_model.is_useable(discount_code):
+        code_data = discount_code_model.get_by_code(discount_code)
+        percentage = code_data["percentage"]
+        # math to get multiplier
+        discount_multiplier = (100 - percentage)/100
+
     for item in current_user["shopping_cart"]:
-        item_price = item_model.get_by_name(item)["price"]
+        item_price = item_model.get_by_name(item)["price"] * discount_multiplier
         total_price += item_price
 
     if current_user["balance"] < total_price:
@@ -192,3 +202,26 @@ def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)]
 
     user_model.update(current_user["_id"], {"shopping_cart": current_user["shopping_cart"], "balance": new_balance, "items_owned":current_user["items_owned"]}, )
     return {"items_owned":current_user["items_owned"], "balance":new_balance}
+
+
+@app.post("/discount/add/")
+def discount_adder(code:DiscountCode, current_user: Annotated[str, Depends(get_current_user)]):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user is not an admin")
+    result = discount_code_model.get_by_code(code.name)
+    if result:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="code already exists")
+    discount_code_model.create(code.name, code.expiery_seconds, code.percentage)
+    return {"code": code.name}
+
+
+@app.put("/discount/remove/{code}")
+def discount_remover(code: str, current_user: Annotated[str, Depends(get_current_user)]):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user is not an admin")
+    deleted = discount_code_model.delete(code)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="code does not exist")
+    return {"description": f"code {code} removed"}
+
+        
