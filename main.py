@@ -150,7 +150,7 @@ def charge_balance(current_user: Annotated[str, Depends(get_current_user)], conf
 
 
 @app.post("/shopping_cart/{act}/{item_name}")
-def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], act: str, item_name:str, existing_items: Annotated[list, Depends(read_items)]):
+def change_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], act: str, item_name:str, existing_items: Annotated[list, Depends(read_items)]):
     if act not in ("add", "remove"):
         raise HTTPException(status=status.HTTP_404_NOT_FOUND, detail="path act argument is not add or remove")
     if act == "remove":
@@ -163,7 +163,7 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user does not have this item")
             
     if act == "add":
-        if not item_name in existing_items or item_name in current_user["items_owned"]:
+        if not item_name in existing_items:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="item does not exist")
         if item_name in current_user["shopping_cart"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="item already exists in shopping cart")
@@ -174,7 +174,7 @@ def add_item_to_shopping_cart(current_user: Annotated[str, Depends(get_current_u
         user_model.update(current_user["_id"], {"shopping_cart": shopping_cart})
         return {"description":"item added successfully", "shopping_cart": shopping_cart}
     
-#TODO add the discount feature
+
 @app.post("/payoff/")
 def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)], discount_code: str = Body(default=None)):
     total_price = 0
@@ -187,6 +187,9 @@ def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)]
         percentage = code_data["percentage"]
         # math to get multiplier
         discount_multiplier = (100 - percentage)/100
+    
+    if not discount_code_model.is_useable(discount_code):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="discount code is not valid")
 
     for item in current_user["shopping_cart"]:
         item_price = item_model.get_by_name(item)["price"] * discount_multiplier
