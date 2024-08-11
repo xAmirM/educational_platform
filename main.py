@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Body
+from fastapi import FastAPI, Depends, HTTPException, status, Body, UploadFile
 from models import User, UserInDB, TokenData, Token, ShownUser, Item, DiscountCode
 from database import user_model, item_model, discount_code_model
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -188,7 +188,7 @@ def payoff_shopping_cart(current_user: Annotated[str, Depends(get_current_user)]
         # math to get multiplier
         discount_multiplier = (100 - percentage)/100
     
-    if not discount_code_model.is_useable(discount_code):
+    if not discount_code_model.is_useable(discount_code) and discount_code:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="discount code is not valid")
 
     for item in current_user["shopping_cart"]:
